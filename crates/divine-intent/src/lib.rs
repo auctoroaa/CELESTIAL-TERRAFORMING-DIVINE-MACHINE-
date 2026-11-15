@@ -13,7 +13,7 @@ pub use model::{
     Claim, ClaimStatus, Conflict, ConflictState, IntentDocument, Provenance, Relationship,
     Requirement, SourceRecord, Statement, TargetSpec,
 };
-pub use validation::{IntentValidationError, validate_intent};
+pub use validation::{validate_intent, IntentValidationError};
 
 impl IntentDocument {
     /// Validate this revision before it is passed to planning or execution.
