@@ -4,6 +4,7 @@
 use glam::{DVec3, Vec3};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::io;
 use thiserror::Error;
 
 const REPLAY_FORMAT_VERSION: u32 = 1;
@@ -341,6 +342,36 @@ fn write_canonical_json(value: &Value, output: &mut Vec<u8>) -> Result<(), Repla
     Ok(())
 }
 
+struct FiniteFloatFormatter;
+
+impl serde_json::ser::Formatter for FiniteFloatFormatter {
+    fn write_f32<W>(&mut self, writer: &mut W, value: f32) -> io::Result<()>
+    where
+        W: io::Write,
+    {
+        if !value.is_finite() {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "non-finite f32 is not valid replay data",
+            ));
+        }
+        writer.write_all(value.to_string().as_bytes())
+    }
+
+    fn write_f64<W>(&mut self, writer: &mut W, value: f64) -> io::Result<()>
+    where
+        W: io::Write,
+    {
+        if !value.is_finite() {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "non-finite f64 is not valid replay data",
+            ));
+        }
+        writer.write_all(value.to_string().as_bytes())
+    }
+}
+
 fn canonical_payload_bytes<T: Serialize>(
     payload: &ReplayPayload<T>,
 ) -> Result<Vec<u8>, ReplayIntegrityError> {
@@ -349,7 +380,14 @@ fn canonical_payload_bytes<T: Serialize>(
     {
         return Err(ReplayIntegrityError::VersionMismatch);
     }
-    let value = serde_json::to_value(payload).map_err(|_| ReplayIntegrityError::Serialization)?;
+    let mut serialized = Vec::new();
+    let mut serializer =
+        serde_json::Serializer::with_formatter(&mut serialized, FiniteFloatFormatter);
+    payload
+        .serialize(&mut serializer)
+        .map_err(|_| ReplayIntegrityError::Serialization)?;
+    let value: Value =
+        serde_json::from_slice(&serialized).map_err(|_| ReplayIntegrityError::Serialization)?;
     let mut bytes = Vec::with_capacity(256);
     bytes.extend_from_slice(b"DIVINE-CAMERA-REPLAY\0");
     write_canonical_json(&value, &mut bytes)?;
@@ -516,6 +554,19 @@ mod tests {
         assert_eq!(
             verify_replay(&payload, &seal),
             Err(ReplayIntegrityError::SealMismatch)
+        );
+    }
+
+    #[test]
+    fn rejects_non_finite_payload_numbers_instead_of_coercing_to_null() {
+        let payload = ReplayPayload {
+            format_version: REPLAY_FORMAT_VERSION,
+            contract_version: CAMERA_CONTRACT_VERSION,
+            payload: f64::NAN,
+        };
+        assert_eq!(
+            seal_replay(&payload),
+            Err(ReplayIntegrityError::Serialization)
         );
     }
 
