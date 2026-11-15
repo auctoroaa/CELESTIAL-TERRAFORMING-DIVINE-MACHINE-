@@ -1,9 +1,9 @@
 //! Stable CPU-to-GPU camera uniform layout. Matrices are column-major.
 //! The consuming shader must use this exact field order and metadata contract.
 
+use crate::packet::{split_dvec3, PacketError};
 use bytemuck::{Pod, Zeroable};
 use glam::{DVec3, Mat4};
-use crate::packet::{split_dvec3, PacketError};
 
 #[repr(C, align(16))]
 #[derive(Debug, Clone, Copy, Pod, Zeroable)]
@@ -59,7 +59,12 @@ impl GpuCameraPacket {
             inverse_view_projection: inverse_view_projection.to_cols_array_2d(),
             origin_high: [split.high.x, split.high.y, split.high.z, 0.0],
             origin_low: [split.low.x, split.low.y, split.low.z, 0.0],
-            viewport: [viewport[0], viewport[1], 1.0 / viewport[0], 1.0 / viewport[1]],
+            viewport: [
+                viewport[0],
+                viewport[1],
+                1.0 / viewport[0],
+                1.0 / viewport[1],
+            ],
             clip_parameters,
             metadata: [clip_space, depth_direction, flags, 1],
         })

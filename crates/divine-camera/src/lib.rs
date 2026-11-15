@@ -78,8 +78,14 @@ impl CameraObservation {
         self.viewport.validate()?;
         if !self.near_plane.is_finite()
             || self.near_plane <= 0.0
-            || self.projection_far.is_some_and(|v| !v.is_finite() || v <= self.near_plane)
-            || self.view_projection.iter().flatten().any(|v| !v.is_finite())
+            || self
+                .projection_far
+                .is_some_and(|v| !v.is_finite() || v <= self.near_plane)
+            || self
+                .view_projection
+                .iter()
+                .flatten()
+                .any(|v| !v.is_finite())
         {
             return Err(CameraError::InvalidValue);
         }

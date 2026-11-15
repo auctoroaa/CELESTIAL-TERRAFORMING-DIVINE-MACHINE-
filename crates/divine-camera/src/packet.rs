@@ -102,11 +102,17 @@ mod tests {
     fn subtract_before_narrowing_preserves_local_detail() {
         let origin = DVec3::splat(6.0e9);
         let point = origin + DVec3::new(0.25, 0.5, 0.75);
-        assert_eq!(camera_relative_f32(point, origin).unwrap(), Vec3::new(0.25, 0.5, 0.75));
+        assert_eq!(
+            camera_relative_f32(point, origin).unwrap(),
+            Vec3::new(0.25, 0.5, 0.75)
+        );
     }
 
     #[test]
     fn rejects_unrepresentable_gpu_coordinates() {
-        assert_eq!(split_dvec3(DVec3::splat(f64::MAX)), Err(PacketError::OutOfRange));
+        assert_eq!(
+            split_dvec3(DVec3::splat(f64::MAX)),
+            Err(PacketError::OutOfRange)
+        );
     }
 }
