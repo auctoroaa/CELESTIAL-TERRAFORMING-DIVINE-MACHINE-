@@ -21,9 +21,7 @@ pub enum IntentValidationError {
 }
 
 /// Validate structural integrity without inventing missing creator decisions.
-pub fn validate_intent(
-    intent: &IntentDocument,
-) -> Result<(), Vec<IntentValidationError>> {
+pub fn validate_intent(intent: &IntentDocument) -> Result<(), Vec<IntentValidationError>> {
     let mut errors = Vec::new();
 
     check_nonempty(&mut errors, "schema_version", &intent.schema_version);
@@ -45,9 +43,7 @@ pub fn validate_intent(
         check_nonempty(&mut errors, "target.target_id", &target.target_id);
         check_nonempty(&mut errors, "target.kind", &target.kind);
         check_nonempty(&mut errors, "target.description", &target.description);
-        if !target.target_id.trim().is_empty()
-            && !target_ids.insert(target.target_id.as_str())
-        {
+        if !target.target_id.trim().is_empty() && !target_ids.insert(target.target_id.as_str()) {
             errors.push(IntentValidationError::DuplicateIdentifier {
                 kind: "target",
                 id: target.target_id.clone(),
@@ -57,15 +53,26 @@ pub fn validate_intent(
             check_nonempty(&mut errors, "claim.name", &claim.name);
             check_nonempty(&mut errors, "claim.value", &claim.value);
             if let Some(provenance) = &claim.provenance {
-                check_nonempty(&mut errors, "claim.provenance.source_id", &provenance.source_id);
+                check_nonempty(
+                    &mut errors,
+                    "claim.provenance.source_id",
+                    &provenance.source_id,
+                );
             }
         }
     }
 
     for target in &intent.targets {
         for relationship in &target.relationships {
-            check_nonempty(&mut errors, "relationship.predicate", &relationship.predicate);
-            for id in [&relationship.subject_target_id, &relationship.object_target_id] {
+            check_nonempty(
+                &mut errors,
+                "relationship.predicate",
+                &relationship.predicate,
+            );
+            for id in [
+                &relationship.subject_target_id,
+                &relationship.object_target_id,
+            ] {
                 if !target_ids.contains(id.as_str()) {
                     errors.push(IntentValidationError::UnknownRelationshipTarget {
                         target_id: id.clone(),
@@ -78,20 +85,34 @@ pub fn validate_intent(
     check_unique_ids(
         &mut errors,
         "requirement",
-        intent.requirements.iter().map(|item| item.requirement_id.as_str()),
+        intent
+            .requirements
+            .iter()
+            .map(|item| item.requirement_id.as_str()),
     );
     for requirement in &intent.requirements {
-        check_nonempty(&mut errors, "requirement.requirement_id", &requirement.requirement_id);
+        check_nonempty(
+            &mut errors,
+            "requirement.requirement_id",
+            &requirement.requirement_id,
+        );
         check_nonempty(&mut errors, "requirement.statement", &requirement.statement);
         if requirement.acceptance_criteria.is_empty()
-            || requirement.acceptance_criteria.iter().any(|item| item.trim().is_empty())
+            || requirement
+                .acceptance_criteria
+                .iter()
+                .any(|item| item.trim().is_empty())
         {
             errors.push(IntentValidationError::MissingAcceptanceCriteria {
                 requirement_id: requirement.requirement_id.clone(),
             });
         }
         if let Some(provenance) = &requirement.provenance {
-            check_nonempty(&mut errors, "requirement.provenance.source_id", &provenance.source_id);
+            check_nonempty(
+                &mut errors,
+                "requirement.provenance.source_id",
+                &provenance.source_id,
+            );
         }
     }
 
@@ -103,7 +124,10 @@ pub fn validate_intent(
     check_unique_ids(
         &mut errors,
         "conflict",
-        intent.conflicts.iter().map(|item| item.conflict_id.as_str()),
+        intent
+            .conflicts
+            .iter()
+            .map(|item| item.conflict_id.as_str()),
     );
     for conflict in &intent.conflicts {
         check_nonempty(&mut errors, "conflict.conflict_id", &conflict.conflict_id);
@@ -131,7 +155,11 @@ pub fn validate_intent(
         }
     }
 
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
+    if errors.is_empty() {
+        Ok(())
+    } else {
+        Err(errors)
+    }
 }
 
 fn validate_statements(
@@ -148,16 +176,16 @@ fn validate_statements(
         check_nonempty(errors, "statement.statement_id", &item.statement_id);
         check_nonempty(errors, "statement.statement", &item.statement);
         if let Some(provenance) = &item.provenance {
-            check_nonempty(errors, "statement.provenance.source_id", &provenance.source_id);
+            check_nonempty(
+                errors,
+                "statement.provenance.source_id",
+                &provenance.source_id,
+            );
         }
     }
 }
 
-fn check_nonempty(
-    errors: &mut Vec<IntentValidationError>,
-    field: &'static str,
-    value: &str,
-) {
+fn check_nonempty(errors: &mut Vec<IntentValidationError>, field: &'static str, value: &str) {
     if value.trim().is_empty() {
         errors.push(IntentValidationError::EmptyField { field });
     }
