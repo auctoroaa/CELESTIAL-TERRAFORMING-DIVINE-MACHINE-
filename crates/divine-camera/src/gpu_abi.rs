@@ -128,6 +128,6 @@ mod tests {
             DepthDirection::Forward,
             0,
         );
-        assert_eq!(result, Err(PacketError::InvalidClip));
+        assert!(matches!(result, Err(PacketError::InvalidClip)));
     }
 }

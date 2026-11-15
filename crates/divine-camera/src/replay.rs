@@ -4,7 +4,6 @@
 use glam::{DVec3, Vec3};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::fmt::Write as _;
 use thiserror::Error;
 
 const REPLAY_FORMAT_VERSION: u32 = 1;
@@ -357,7 +356,6 @@ fn canonical_payload_bytes<T: Serialize>(
     let value = serde_json::to_value(payload).map_err(|_| ReplayIntegrityError::Serialization)?;
     let mut bytes = Vec::with_capacity(256);
     bytes.extend_from_slice(b"DIVINE-CAMERA-REPLAY\0");
-    write!(&mut String::new(), "").map_err(|_| ReplayIntegrityError::Serialization)?;
     write_canonical_json(&value, &mut bytes)?;
     Ok(bytes)
 }
