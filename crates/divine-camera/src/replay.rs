@@ -366,10 +366,7 @@ impl serde::ser::SerializeSeq for ValidatorCompound {
     type Ok = ();
     type Error = FiniteValidationError;
 
-    fn serialize_element<T: ?Sized + Serialize>(
-        &mut self,
-        value: &T,
-    ) -> Result<(), Self::Error> {
+    fn serialize_element<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), Self::Error> {
         value.serialize(FiniteValidator)
     }
 
@@ -382,10 +379,7 @@ impl serde::ser::SerializeTuple for ValidatorCompound {
     type Ok = ();
     type Error = FiniteValidationError;
 
-    fn serialize_element<T: ?Sized + Serialize>(
-        &mut self,
-        value: &T,
-    ) -> Result<(), Self::Error> {
+    fn serialize_element<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), Self::Error> {
         value.serialize(FiniteValidator)
     }
 
@@ -398,10 +392,7 @@ impl serde::ser::SerializeTupleStruct for ValidatorCompound {
     type Ok = ();
     type Error = FiniteValidationError;
 
-    fn serialize_field<T: ?Sized + Serialize>(
-        &mut self,
-        value: &T,
-    ) -> Result<(), Self::Error> {
+    fn serialize_field<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), Self::Error> {
         value.serialize(FiniteValidator)
     }
 
@@ -414,10 +405,7 @@ impl serde::ser::SerializeTupleVariant for ValidatorCompound {
     type Ok = ();
     type Error = FiniteValidationError;
 
-    fn serialize_field<T: ?Sized + Serialize>(
-        &mut self,
-        value: &T,
-    ) -> Result<(), Self::Error> {
+    fn serialize_field<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), Self::Error> {
         value.serialize(FiniteValidator)
     }
 
@@ -430,17 +418,11 @@ impl serde::ser::SerializeMap for ValidatorCompound {
     type Ok = ();
     type Error = FiniteValidationError;
 
-    fn serialize_key<T: ?Sized + Serialize>(
-        &mut self,
-        key: &T,
-    ) -> Result<(), Self::Error> {
+    fn serialize_key<T: ?Sized + Serialize>(&mut self, key: &T) -> Result<(), Self::Error> {
         key.serialize(FiniteValidator)
     }
 
-    fn serialize_value<T: ?Sized + Serialize>(
-        &mut self,
-        value: &T,
-    ) -> Result<(), Self::Error> {
+    fn serialize_value<T: ?Sized + Serialize>(&mut self, value: &T) -> Result<(), Self::Error> {
         value.serialize(FiniteValidator)
     }
 
@@ -503,37 +485,79 @@ impl serde::Serializer for FiniteValidator {
     type SerializeStruct = ValidatorCompound;
     type SerializeStructVariant = ValidatorCompound;
 
-    fn serialize_bool(self, _value: bool) -> Result<(), Self::Error> { Ok(()) }
-    fn serialize_i8(self, _value: i8) -> Result<(), Self::Error> { Ok(()) }
-    fn serialize_i16(self, _value: i16) -> Result<(), Self::Error> { Ok(()) }
-    fn serialize_i32(self, _value: i32) -> Result<(), Self::Error> { Ok(()) }
-    fn serialize_i64(self, _value: i64) -> Result<(), Self::Error> { Ok(()) }
-    fn serialize_i128(self, _value: i128) -> Result<(), Self::Error> { Ok(()) }
-    fn serialize_u8(self, _value: u8) -> Result<(), Self::Error> { Ok(()) }
-    fn serialize_u16(self, _value: u16) -> Result<(), Self::Error> { Ok(()) }
-    fn serialize_u32(self, _value: u32) -> Result<(), Self::Error> { Ok(()) }
-    fn serialize_u64(self, _value: u64) -> Result<(), Self::Error> { Ok(()) }
-    fn serialize_u128(self, _value: u128) -> Result<(), Self::Error> { Ok(()) }
+    fn serialize_bool(self, _value: bool) -> Result<(), Self::Error> {
+        Ok(())
+    }
+    fn serialize_i8(self, _value: i8) -> Result<(), Self::Error> {
+        Ok(())
+    }
+    fn serialize_i16(self, _value: i16) -> Result<(), Self::Error> {
+        Ok(())
+    }
+    fn serialize_i32(self, _value: i32) -> Result<(), Self::Error> {
+        Ok(())
+    }
+    fn serialize_i64(self, _value: i64) -> Result<(), Self::Error> {
+        Ok(())
+    }
+    fn serialize_i128(self, _value: i128) -> Result<(), Self::Error> {
+        Ok(())
+    }
+    fn serialize_u8(self, _value: u8) -> Result<(), Self::Error> {
+        Ok(())
+    }
+    fn serialize_u16(self, _value: u16) -> Result<(), Self::Error> {
+        Ok(())
+    }
+    fn serialize_u32(self, _value: u32) -> Result<(), Self::Error> {
+        Ok(())
+    }
+    fn serialize_u64(self, _value: u64) -> Result<(), Self::Error> {
+        Ok(())
+    }
+    fn serialize_u128(self, _value: u128) -> Result<(), Self::Error> {
+        Ok(())
+    }
 
     fn serialize_f32(self, value: f32) -> Result<(), Self::Error> {
-        if value.is_finite() { Ok(()) } else { Err(FiniteValidationError) }
+        if value.is_finite() {
+            Ok(())
+        } else {
+            Err(FiniteValidationError)
+        }
     }
 
     fn serialize_f64(self, value: f64) -> Result<(), Self::Error> {
-        if value.is_finite() { Ok(()) } else { Err(FiniteValidationError) }
+        if value.is_finite() {
+            Ok(())
+        } else {
+            Err(FiniteValidationError)
+        }
     }
 
-    fn serialize_char(self, _value: char) -> Result<(), Self::Error> { Ok(()) }
-    fn serialize_str(self, _value: &str) -> Result<(), Self::Error> { Ok(()) }
-    fn serialize_bytes(self, _value: &[u8]) -> Result<(), Self::Error> { Ok(()) }
-    fn serialize_none(self) -> Result<(), Self::Error> { Ok(()) }
+    fn serialize_char(self, _value: char) -> Result<(), Self::Error> {
+        Ok(())
+    }
+    fn serialize_str(self, _value: &str) -> Result<(), Self::Error> {
+        Ok(())
+    }
+    fn serialize_bytes(self, _value: &[u8]) -> Result<(), Self::Error> {
+        Ok(())
+    }
+    fn serialize_none(self) -> Result<(), Self::Error> {
+        Ok(())
+    }
 
     fn serialize_some<T: ?Sized + Serialize>(self, value: &T) -> Result<(), Self::Error> {
         value.serialize(self)
     }
 
-    fn serialize_unit(self) -> Result<(), Self::Error> { Ok(()) }
-    fn serialize_unit_struct(self, _name: &'static str) -> Result<(), Self::Error> { Ok(()) }
+    fn serialize_unit(self) -> Result<(), Self::Error> {
+        Ok(())
+    }
+    fn serialize_unit_struct(self, _name: &'static str) -> Result<(), Self::Error> {
+        Ok(())
+    }
 
     fn serialize_unit_variant(
         self,
@@ -614,7 +638,9 @@ impl serde::Serializer for FiniteValidator {
         Ok(())
     }
 
-    fn is_human_readable(&self) -> bool { true }
+    fn is_human_readable(&self) -> bool {
+        true
+    }
 }
 
 fn canonical_payload_bytes<T: Serialize>(
