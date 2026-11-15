@@ -142,11 +142,7 @@ impl PlanetaryWorld for RecordedWorldPlayback {
         desired: DVec3,
         radius: f64,
     ) -> Result<DVec3, WorldQueryError> {
-        if !origin.is_finite()
-            || !desired.is_finite()
-            || !radius.is_finite()
-            || radius < 0.0
-        {
+        if !origin.is_finite() || !desired.is_finite() || !radius.is_finite() || radius < 0.0 {
             return Err(WorldQueryError::InvalidInput);
         }
         match self.take()? {
@@ -311,8 +307,8 @@ fn write_canonical_json(value: &Value, output: &mut Vec<u8>) -> Result<(), Repla
             output.extend_from_slice(number.to_string().as_bytes());
         }
         Value::String(value) => {
-            let encoded = serde_json::to_vec(value)
-                .map_err(|_| ReplayIntegrityError::Serialization)?;
+            let encoded =
+                serde_json::to_vec(value).map_err(|_| ReplayIntegrityError::Serialization)?;
             output.extend_from_slice(&encoded);
         }
         Value::Array(values) => {
@@ -333,8 +329,8 @@ fn write_canonical_json(value: &Value, output: &mut Vec<u8>) -> Result<(), Repla
                 if index != 0 {
                     output.push(b',');
                 }
-                let encoded_key = serde_json::to_vec(key)
-                    .map_err(|_| ReplayIntegrityError::Serialization)?;
+                let encoded_key =
+                    serde_json::to_vec(key).map_err(|_| ReplayIntegrityError::Serialization)?;
                 output.extend_from_slice(&encoded_key);
                 output.push(b':');
                 write_canonical_json(&values[*key], output)?;
@@ -469,7 +465,10 @@ mod tests {
             distance: 10.0,
             surface_id: None,
         };
-        assert_eq!(validate_terrain_hit(&ray, &hit), Err(WorldQueryError::InvalidInput));
+        assert_eq!(
+            validate_terrain_hit(&ray, &hit),
+            Err(WorldQueryError::InvalidInput)
+        );
     }
 
     #[test]

@@ -111,7 +111,15 @@ mod tests {
     #[test]
     fn metadata_uses_typed_discriminants() {
         let packet = valid_packet().unwrap();
-        assert_eq!(packet.metadata, [ClipSpace::ZeroToOne as u32, DepthDirection::Reversed as u32, 0, 1]);
+        assert_eq!(
+            packet.metadata,
+            [
+                ClipSpace::ZeroToOne as u32,
+                DepthDirection::Reversed as u32,
+                0,
+                1
+            ]
+        );
     }
 
     #[test]
