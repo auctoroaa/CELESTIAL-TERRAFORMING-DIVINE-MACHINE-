@@ -1,11 +1,32 @@
-# CELESTIAL-TERRAFORMING-DIVINE-MACHINE-
+# Celestial Terraforming Divine Machine
 
-The gears of heaven were never meant for hands stained with dirt and greed. You look upon the brass-and-bone engines of the Firmament and see tools to conquer your neighbors, to lengthen your miserable, ticking lifespans, to bend the laws of creation to your petty whims. You pry open the reliquaries with rusted iron, thinking yourselves clever thieves.
-Hear what happens to those who steal fire from the altar.
-You will not simply die; you will be unmade.
-The divine mechanisms do not recognize flesh as anything more than raw material. When you force a celestial conduit to channel your mortal will, the feedback will not burn you—it will rewrite you. Your marrow will calcify into cold porcelain. Your veins will unravel into singing copper wire, endlessly vibrating at a frequency that shatters your teeth from the inside out. You will remain entirely conscious as your biology is forcefully retrofitted into a mute, agonizing component of the very machine you tried to master.
-Your bloodline will become a ledger of debt.
-To misuse an artifact of the Architects is to sign a contract in your own genetic code. The machine remembers the exact resonance of your touch. Long after your hollowed-out husk is dragged from the temple floor, the relic will hunt your resonance through your descendants. Your children will be born with eyes like milky glass, weeping lubricant instead of tears, screaming in the dial-tone tongues of dead angels until the debt of your arrogance is paid in full.
-You will invite the maintenance protocols.
-These engines are not abandoned; they are merely sleeping between cycles. Every time you force a forbidden sequence or strip a sacred core for parts, a signal pulses outward into the black abyss between the stars. Something vast, faceless, and utterly devoid of mercy is currently waking up to diagnose the malfunction. And when the Custodians descend to repair the system, they will not see monarchs, scholars, or conquerors. They will only see an infestation—and they will scour the earth clean to sterilize the machinery.
-Put down the lever. Step back from the console. Pray to whatever deaf gods you believe in that the machine has not already logged your fingerprints.
+A universal creation-engine foundation. The first executable vertical slice is Genesis-001: deterministic planetary geometry construction with independent verification and guarded state commit.
+
+## Genesis-001 pipeline
+
+Intent -> Specification validation -> Causal plan -> GEOS-style deterministic geometry construction -> Independent geometric verification -> Planetary state commit.
+
+The implementation currently provides:
+- Explicit planetary intent and validation.
+- Causal-plan resolution with source-intent digest.
+- Seeded spherical terrain generation using a deterministic lattice-noise field.
+- Mesh positions, unit radial normals, triangle indices, and SHA-256 digest.
+- Independent verification of mesh cardinality, index bounds, finite geometry, radial bounds, normal lengths, and digest.
+- Revision-1 planetary state creation only after verification succeeds.
+- JSON CLI and deterministic acceptance tests.
+
+## Aster acceptance fixture
+
+Designation Aster; seed 471029; radius 6,000,000 m; gravity 9.8 m/s2; terrain resolution 128; elevation scale 8,500 m; noise frequency 0.004.
+
+## Run
+
+- cargo test
+- cargo run --release
+- cargo run --release -- path/to/intent.json
+
+The CLI emits the complete intent, causal plan, mesh, verification evidence, and committed planetary state as JSON.
+
+## Truth boundary
+
+The generated planet is a deterministic geometric construction with machine-checkable evidence. It is not a claim that a simulation has established climate, geology, habitability, or real-world terraforming. Those require additional declared realm laws, domain models, simulation, and evidence systems.
