@@ -56,7 +56,10 @@ mod tests {
 
     #[test]
     fn digest_is_stable_for_the_same_revision() {
-        assert_eq!(digest_intent(&intent()).unwrap(), digest_intent(&intent()).unwrap());
+        assert_eq!(
+            digest_intent(&intent()).unwrap(),
+            digest_intent(&intent()).unwrap()
+        );
     }
 
     #[test]
@@ -64,7 +67,10 @@ mod tests {
         let original = intent();
         let mut revised = original.clone();
         revised.revision = 2;
-        assert_ne!(digest_intent(&original).unwrap(), digest_intent(&revised).unwrap());
+        assert_ne!(
+            digest_intent(&original).unwrap(),
+            digest_intent(&revised).unwrap()
+        );
     }
 
     #[test]
