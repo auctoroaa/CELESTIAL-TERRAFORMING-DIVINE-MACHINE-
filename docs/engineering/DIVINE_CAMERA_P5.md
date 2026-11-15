@@ -21,7 +21,12 @@ This change introduces a standalone `divine-camera` Rust crate. It does not repl
 - Exact query equality is intentionally strict for recorded playback. Live-world tolerance policy is not yet implemented by this crate.
 
 ## Verification status
-Unit tests are included for split-origin precision, subtract-before-narrowing, GPU ABI size/alignment/offsets, ordered replay, query divergence, and tamper detection. They have not been executed in the hosted GitHub connector environment. Run:
+Unit tests cover split-origin precision, subtract-before-narrowing, GPU ABI size/alignment/offsets, typed metadata, normalized camera state, invalid replay inputs and results, ray-hit consistency, map-order-independent sealing, non-finite payload rejection, version rejection, and tamper detection.
+
+GitHub Actions passed on commit `957d6c3a87a5a49ed836719639c262a100c54f78`:
+- `cargo fmt --all -- --check`
+- `cargo clippy --workspace --all-targets -- -D warnings`
+- `cargo test --workspace --all-targets` (19 passed, 0 failed). Run:
 
 ```sh
 cargo fmt --all -- --check
@@ -29,4 +34,4 @@ cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 ```
 
-Do not label this implementation production-verified until those commands pass and the renderer shader ABI is integration-tested.
+The Rust crate quality gates pass. Do not label the GPU ABI production-integrated until the consuming renderer shader is tested against the CPU layout.
