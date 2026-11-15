@@ -1,0 +1,20 @@
+[package]
+name = "celestial-terraforming-divine-machine"
+version = "0.1.0"
+edition = "2021"
+license = "UNLICENSED"
+description = "Deterministic planetary creation and independently verified construction engine"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+thiserror = "2"
+
+[lib]
+name = "celestial_terraforming_divine_machine"
+path = "src/lib.rs"
+
+[[bin]]
+name = "celestial"
+path = "src/main.rs"
