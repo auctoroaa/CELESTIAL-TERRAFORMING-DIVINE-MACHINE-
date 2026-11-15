@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/divine-camera"]
+members = ["crates/divine-camera", "crates/divine-intent"]
 
 [workspace.package]
 edition = "2021"
