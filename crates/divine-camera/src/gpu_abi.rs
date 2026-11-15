@@ -130,7 +130,7 @@ mod tests {
             Mat4::IDENTITY,
             Mat4::IDENTITY,
             DVec3::ZERO,
-            [f32::MIN_POSITIVE / 2.0, 1.0],
+            [f32::from_bits(1), 1.0],
             [0.1, 1000.0, 5000.0, 10000.0],
             ClipSpace::ZeroToOne,
             DepthDirection::Forward,
