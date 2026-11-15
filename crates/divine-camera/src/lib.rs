@@ -15,6 +15,8 @@ pub enum CameraError {
     InvalidValue,
     #[error("unsupported or incompatible camera contract")]
     ContractMismatch,
+    #[error(transparent)]
+    Packet(#[from] packet::PacketError),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -94,6 +96,9 @@ impl CameraObservation {
 
     /// Convert a planetary point to camera-relative f32 only after f64 subtraction.
     pub fn relative_position(&self, world: DVec3) -> Result<Vec3, CameraError> {
-        packet::camera_relative_f32(world, self.state.world_position)
+        Ok(packet::camera_relative_f32(
+            world,
+            self.state.world_position,
+        )?)
     }
 }
