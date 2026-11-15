@@ -360,7 +360,7 @@ impl serde_json::ser::Formatter for FiniteFloatFormatter {
 
     fn write_f64<W>(&mut self, writer: &mut W, value: f64) -> io::Result<()>
     where
-        W: io::Write,
+        W: ?Sized + io::Write,
     {
         if !value.is_finite() {
             return Err(io::Error::new(
