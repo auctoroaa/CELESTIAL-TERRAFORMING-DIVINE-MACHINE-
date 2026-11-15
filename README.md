@@ -106,7 +106,7 @@ The DIR name and exact schema are design proposals until formally accepted and i
 
 The repository is an early Rust engineering foundation, not yet the complete universal creation engine.
 
-At the last verified engineering checkpoint, the workspace contained the `divine-camera` crate. Its camera packet, GPU ABI, and replay integrity work had passed the recorded hosted CI checks: formatting, Clippy with warnings denied, and 19 tests. This verifies that camera/replay foundation only. It does not prove that universal intent compilation, general construction, planetary generation, a renderer integration, or an end-to-end world-building pipeline exists.
+The current feature branch contains the `divine-camera` crate and an initial `divine-intent` crate. The camera packet, GPU ABI, and replay integrity work have passed the previously recorded hosted CI checks: formatting, Clippy with warnings denied, and 19 tests. The new intent crate currently provides a source-preserving, domain-neutral data model, explicit declared/derived/assumed claim status, requirements and acceptance criteria, constraints, governing laws, assumptions, unknowns, conflicts, structural validation, and a domain-separated BLAKE3 revision digest. The intent crate has been committed to this branch, but its CI result has not yet been verified. This is an initial intent foundation, not a completed intent parser/compiler, capability resolver, construction system, renderer integration, or end-to-end creation pipeline.
 
 Do not describe a proposed subsystem as implemented. Before changing code, inspect the current branch, workspace, tests, documentation, and CI. Update this status section when evidence changes.
 
