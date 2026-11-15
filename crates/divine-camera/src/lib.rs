@@ -37,11 +37,17 @@ pub struct CameraState {
 
 impl CameraState {
     pub fn validate(&self) -> Result<(), CameraError> {
+        let rotation_length = self.world_rotation.length_squared();
+        let up_length = self.local_up.length_squared();
+        const UNIT_TOLERANCE: f64 = 1.0e-6;
+
         if !self.world_position.is_finite()
             || !self.world_rotation.is_finite()
-            || self.world_rotation.length_squared() < 1.0e-20
+            || !rotation_length.is_finite()
+            || (rotation_length - 1.0).abs() > UNIT_TOLERANCE
             || !self.local_up.is_finite()
-            || self.local_up.length_squared() < 1.0e-20
+            || !up_length.is_finite()
+            || (up_length - 1.0).abs() > UNIT_TOLERANCE
         {
             return Err(CameraError::InvalidValue);
         }
@@ -100,5 +106,38 @@ impl CameraObservation {
             world,
             self.state.world_position,
         )?)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn valid_state() -> CameraState {
+        CameraState {
+            mode: CameraMode::FirstPerson,
+            world_position: DVec3::ZERO,
+            world_rotation: DQuat::IDENTITY,
+            local_up: DVec3::Y,
+        }
+    }
+
+    #[test]
+    fn accepts_unit_camera_orientation_and_up() {
+        assert!(valid_state().validate().is_ok());
+    }
+
+    #[test]
+    fn rejects_non_unit_camera_orientation() {
+        let mut state = valid_state();
+        state.world_rotation = DQuat::from_xyzw(0.0, 0.0, 0.0, 2.0);
+        assert_eq!(state.validate(), Err(CameraError::InvalidValue));
+    }
+
+    #[test]
+    fn rejects_non_unit_local_up() {
+        let mut state = valid_state();
+        state.local_up = DVec3::new(0.0, 2.0, 0.0);
+        assert_eq!(state.validate(), Err(CameraError::InvalidValue));
     }
 }

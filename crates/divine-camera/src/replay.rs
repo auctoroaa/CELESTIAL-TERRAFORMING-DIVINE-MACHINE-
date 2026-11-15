@@ -1,9 +1,15 @@
 //! Sealed deterministic camera replay with one ordered world-query stream.
-//! Playback fails closed: query mismatch, exhaustion, or unconsumed events are errors.
+//! Playback fails closed: invalid data, query mismatch, exhaustion, or unconsumed events are errors.
 
 use glam::{DVec3, Vec3};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use std::fmt::Write as _;
 use thiserror::Error;
+
+const REPLAY_FORMAT_VERSION: u32 = 1;
+const CAMERA_CONTRACT_VERSION: u32 = 2;
+const SEAL_ALGORITHM: &str = "BLAKE3-CANONICAL-JSON-V1";
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SurfaceSample {
@@ -54,7 +60,7 @@ pub enum WorldQueryError {
     Diverged { index: usize },
     #[error("recorded world-query stream contains unconsumed events")]
     Unconsumed,
-    #[error("invalid world-query input")]
+    #[error("invalid world-query input or recorded result")]
     InvalidInput,
 }
 
@@ -78,8 +84,17 @@ pub struct RecordedWorldPlayback {
 }
 
 impl RecordedWorldPlayback {
+    /// Construct playback without eager validation. Every event is validated before its result is returned.
     pub fn new(events: Vec<WorldQuery>) -> Self {
         Self { events, cursor: 0 }
+    }
+
+    /// Validate the complete recorded stream before playback begins.
+    pub fn try_new(events: Vec<WorldQuery>) -> Result<Self, WorldQueryError> {
+        for event in &events {
+            validate_event(event)?;
+        }
+        Ok(Self::new(events))
     }
 
     fn take(&mut self) -> Result<WorldQuery, WorldQueryError> {
@@ -103,11 +118,19 @@ impl PlanetaryWorld for RecordedWorldPlayback {
         &mut self,
         position: DVec3,
     ) -> Result<Option<SurfaceSample>, WorldQueryError> {
+        if !position.is_finite() {
+            return Err(WorldQueryError::InvalidInput);
+        }
         match self.take()? {
             WorldQuery::SampleSurface {
                 position: expected,
                 result,
-            } if expected == position => Ok(result),
+            } if expected == position => {
+                if let Some(sample) = &result {
+                    validate_surface_sample(sample)?;
+                }
+                Ok(result)
+            }
             _ => Err(WorldQueryError::Diverged {
                 index: self.cursor - 1,
             }),
@@ -120,16 +143,28 @@ impl PlanetaryWorld for RecordedWorldPlayback {
         desired: DVec3,
         radius: f64,
     ) -> Result<DVec3, WorldQueryError> {
-        if !radius.is_finite() || radius < 0.0 {
+        if !origin.is_finite()
+            || !desired.is_finite()
+            || !radius.is_finite()
+            || radius < 0.0
+        {
             return Err(WorldQueryError::InvalidInput);
         }
         match self.take()? {
             WorldQuery::ResolveSegment {
-                origin: eo,
-                desired: ed,
-                radius: er,
+                origin: expected_origin,
+                desired: expected_desired,
+                radius: expected_radius,
                 result,
-            } if eo == origin && ed == desired && er.to_bits() == radius.to_bits() => Ok(result),
+            } if expected_origin == origin
+                && expected_desired == desired
+                && expected_radius.to_bits() == radius.to_bits() =>
+            {
+                if !result.is_finite() {
+                    return Err(WorldQueryError::InvalidInput);
+                }
+                Ok(result)
+            }
             _ => Err(WorldQueryError::Diverged {
                 index: self.cursor - 1,
             }),
@@ -142,7 +177,12 @@ impl PlanetaryWorld for RecordedWorldPlayback {
             WorldQuery::RaycastTerrain {
                 ray: expected,
                 result,
-            } if expected == *ray => Ok(result),
+            } if expected == *ray => {
+                if let Some(hit) = &result {
+                    validate_terrain_hit(ray, hit)?;
+                }
+                Ok(result)
+            }
             _ => Err(WorldQueryError::Diverged {
                 index: self.cursor - 1,
             }),
@@ -158,6 +198,55 @@ impl PlanetaryWorld for RecordedWorldPlayback {
     }
 }
 
+fn validate_event(event: &WorldQuery) -> Result<(), WorldQueryError> {
+    match event {
+        WorldQuery::SampleSurface { position, result } => {
+            if !position.is_finite() {
+                return Err(WorldQueryError::InvalidInput);
+            }
+            if let Some(sample) = result {
+                validate_surface_sample(sample)?;
+            }
+        }
+        WorldQuery::ResolveSegment {
+            origin,
+            desired,
+            radius,
+            result,
+        } => {
+            if !origin.is_finite()
+                || !desired.is_finite()
+                || !radius.is_finite()
+                || *radius < 0.0
+                || !result.is_finite()
+            {
+                return Err(WorldQueryError::InvalidInput);
+            }
+        }
+        WorldQuery::RaycastTerrain { ray, result } => {
+            validate_ray(ray)?;
+            if let Some(hit) = result {
+                validate_terrain_hit(ray, hit)?;
+            }
+        }
+    }
+    Ok(())
+}
+
+fn validate_unit_normal(normal: Vec3) -> Result<(), WorldQueryError> {
+    if !normal.is_finite() || (normal.length_squared() - 1.0).abs() > 1.0e-3 {
+        return Err(WorldQueryError::InvalidInput);
+    }
+    Ok(())
+}
+
+fn validate_surface_sample(sample: &SurfaceSample) -> Result<(), WorldQueryError> {
+    if !sample.position.is_finite() {
+        return Err(WorldQueryError::InvalidInput);
+    }
+    validate_unit_normal(sample.normal)
+}
+
 fn validate_ray(ray: &WorldRay) -> Result<(), WorldQueryError> {
     if !ray.origin.is_finite()
         || !ray.direction.is_finite()
@@ -167,6 +256,23 @@ fn validate_ray(ray: &WorldRay) -> Result<(), WorldQueryError> {
         || ray.min_distance < 0.0
         || ray.max_distance <= ray.min_distance
     {
+        return Err(WorldQueryError::InvalidInput);
+    }
+    Ok(())
+}
+
+fn validate_terrain_hit(ray: &WorldRay, hit: &TerrainHit) -> Result<(), WorldQueryError> {
+    if !hit.position.is_finite()
+        || !hit.distance.is_finite()
+        || hit.distance < ray.min_distance
+        || hit.distance > ray.max_distance
+    {
+        return Err(WorldQueryError::InvalidInput);
+    }
+    validate_unit_normal(hit.normal)?;
+    let expected = ray.origin + ray.direction.as_dvec3() * hit.distance;
+    let tolerance = 1.0e-6 * hit.distance.abs().max(1.0);
+    if (hit.position - expected).abs().max_element() > tolerance {
         return Err(WorldQueryError::InvalidInput);
     }
     Ok(())
@@ -195,12 +301,73 @@ pub enum ReplayIntegrityError {
     VersionMismatch,
 }
 
+fn write_canonical_json(value: &Value, output: &mut Vec<u8>) -> Result<(), ReplayIntegrityError> {
+    match value {
+        Value::Null => output.extend_from_slice(b"null"),
+        Value::Bool(value) => output.extend_from_slice(if *value { b"true" } else { b"false" }),
+        Value::Number(number) => {
+            if number.as_f64().is_some_and(|value| !value.is_finite()) {
+                return Err(ReplayIntegrityError::Serialization);
+            }
+            output.extend_from_slice(number.to_string().as_bytes());
+        }
+        Value::String(value) => {
+            let encoded = serde_json::to_vec(value)
+                .map_err(|_| ReplayIntegrityError::Serialization)?;
+            output.extend_from_slice(&encoded);
+        }
+        Value::Array(values) => {
+            output.push(b'[');
+            for (index, value) in values.iter().enumerate() {
+                if index != 0 {
+                    output.push(b',');
+                }
+                write_canonical_json(value, output)?;
+            }
+            output.push(b']');
+        }
+        Value::Object(values) => {
+            output.push(b'{');
+            let mut keys: Vec<_> = values.keys().collect();
+            keys.sort_unstable();
+            for (index, key) in keys.iter().enumerate() {
+                if index != 0 {
+                    output.push(b',');
+                }
+                let encoded_key = serde_json::to_vec(key)
+                    .map_err(|_| ReplayIntegrityError::Serialization)?;
+                output.extend_from_slice(&encoded_key);
+                output.push(b':');
+                write_canonical_json(&values[*key], output)?;
+            }
+            output.push(b'}');
+        }
+    }
+    Ok(())
+}
+
+fn canonical_payload_bytes<T: Serialize>(
+    payload: &ReplayPayload<T>,
+) -> Result<Vec<u8>, ReplayIntegrityError> {
+    if payload.format_version != REPLAY_FORMAT_VERSION
+        || payload.contract_version != CAMERA_CONTRACT_VERSION
+    {
+        return Err(ReplayIntegrityError::VersionMismatch);
+    }
+    let value = serde_json::to_value(payload).map_err(|_| ReplayIntegrityError::Serialization)?;
+    let mut bytes = Vec::with_capacity(256);
+    bytes.extend_from_slice(b"DIVINE-CAMERA-REPLAY\0");
+    write!(&mut String::new(), "").map_err(|_| ReplayIntegrityError::Serialization)?;
+    write_canonical_json(&value, &mut bytes)?;
+    Ok(bytes)
+}
+
 pub fn seal_replay<T: Serialize>(
     payload: &ReplayPayload<T>,
 ) -> Result<ReplaySeal, ReplayIntegrityError> {
-    let bytes = serde_json::to_vec(payload).map_err(|_| ReplayIntegrityError::Serialization)?;
+    let bytes = canonical_payload_bytes(payload)?;
     Ok(ReplaySeal {
-        algorithm: "BLAKE3".into(),
+        algorithm: SEAL_ALGORITHM.into(),
         digest_hex: blake3::hash(&bytes).to_hex().to_string(),
     })
 }
@@ -209,11 +376,11 @@ pub fn verify_replay<T: Serialize>(
     payload: &ReplayPayload<T>,
     seal: &ReplaySeal,
 ) -> Result<(), ReplayIntegrityError> {
-    if payload.format_version != 1 || payload.contract_version != 2 {
-        return Err(ReplayIntegrityError::VersionMismatch);
+    if seal.algorithm != SEAL_ALGORITHM {
+        return Err(ReplayIntegrityError::SealMismatch);
     }
     let actual = seal_replay(payload)?;
-    if seal.algorithm != actual.algorithm || seal.digest_hex != actual.digest_hex {
+    if seal.digest_hex != actual.digest_hex {
         return Err(ReplayIntegrityError::SealMismatch);
     }
     Ok(())
@@ -222,6 +389,7 @@ pub fn verify_replay<T: Serialize>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashMap;
 
     #[test]
     fn playback_uses_single_ordered_stream_and_checks_consumption() {
@@ -261,10 +429,88 @@ mod tests {
     }
 
     #[test]
+    fn rejects_non_finite_query_inputs_without_consuming_event() {
+        let mut world = RecordedWorldPlayback::new(vec![WorldQuery::SampleSurface {
+            position: DVec3::ZERO,
+            result: None,
+        }]);
+        assert_eq!(
+            world.sample_surface(DVec3::splat(f64::NAN)),
+            Err(WorldQueryError::InvalidInput)
+        );
+        assert_eq!(world.consumed(), 0);
+    }
+
+    #[test]
+    fn rejects_invalid_recorded_surface_normal() {
+        let events = vec![WorldQuery::SampleSurface {
+            position: DVec3::ZERO,
+            result: Some(SurfaceSample {
+                position: DVec3::ZERO,
+                normal: Vec3::ZERO,
+                surface_id: None,
+            }),
+        }];
+        assert_eq!(
+            RecordedWorldPlayback::try_new(events).unwrap_err(),
+            WorldQueryError::InvalidInput
+        );
+    }
+
+    #[test]
+    fn rejects_terrain_hit_that_does_not_lie_on_ray() {
+        let ray = WorldRay {
+            origin: DVec3::ZERO,
+            direction: Vec3::X,
+            min_distance: 0.0,
+            max_distance: 100.0,
+        };
+        let hit = TerrainHit {
+            position: DVec3::new(10.0, 1.0, 0.0),
+            normal: Vec3::Y,
+            distance: 10.0,
+            surface_id: None,
+        };
+        assert_eq!(validate_terrain_hit(&ray, &hit), Err(WorldQueryError::InvalidInput));
+    }
+
+    #[test]
+    fn rejects_ray_with_non_unit_direction() {
+        let ray = WorldRay {
+            origin: DVec3::ZERO,
+            direction: Vec3::new(2.0, 0.0, 0.0),
+            min_distance: 0.0,
+            max_distance: 100.0,
+        };
+        assert_eq!(validate_ray(&ray), Err(WorldQueryError::InvalidInput));
+    }
+
+    #[test]
+    fn canonical_seal_is_independent_of_map_insertion_order() {
+        let mut first = HashMap::new();
+        first.insert("z".to_string(), 1u32);
+        first.insert("a".to_string(), 2u32);
+        let mut second = HashMap::new();
+        second.insert("a".to_string(), 2u32);
+        second.insert("z".to_string(), 1u32);
+        let p1 = ReplayPayload {
+            format_version: REPLAY_FORMAT_VERSION,
+            contract_version: CAMERA_CONTRACT_VERSION,
+            payload: first,
+        };
+        let p2 = ReplayPayload {
+            format_version: REPLAY_FORMAT_VERSION,
+            contract_version: CAMERA_CONTRACT_VERSION,
+            payload: second,
+        };
+        assert_eq!(seal_replay(&p1).unwrap(), seal_replay(&p2).unwrap());
+    }
+
+    #[test]
     fn tampering_invalidates_seal_before_replay() {
         let mut payload = ReplayPayload {
-            format_version: 1,
-            contract_version: 2,
+            format_version: REPLAY_FORMAT_VERSION,
+            contract_version: CAMERA_CONTRACT_VERSION,
             payload: vec![1u32, 2],
         };
         let seal = seal_replay(&payload).unwrap();
@@ -273,6 +519,19 @@ mod tests {
         assert_eq!(
             verify_replay(&payload, &seal),
             Err(ReplayIntegrityError::SealMismatch)
+        );
+    }
+
+    #[test]
+    fn rejects_unsupported_replay_version() {
+        let payload = ReplayPayload {
+            format_version: 99,
+            contract_version: CAMERA_CONTRACT_VERSION,
+            payload: vec![1u32],
+        };
+        assert_eq!(
+            seal_replay(&payload),
+            Err(ReplayIntegrityError::VersionMismatch)
         );
     }
 }

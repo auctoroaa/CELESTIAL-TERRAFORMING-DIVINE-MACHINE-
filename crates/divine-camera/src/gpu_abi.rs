@@ -1,7 +1,7 @@
 //! Stable CPU-to-GPU camera uniform layout. Matrices are column-major.
 //! The consuming shader must use this exact field order and metadata contract.
 
-use crate::packet::{split_dvec3, PacketError};
+use crate::packet::{split_dvec3, ClipSpace, DepthDirection, PacketError};
 use bytemuck::{Pod, Zeroable};
 use glam::{DVec3, Mat4};
 
@@ -33,8 +33,8 @@ impl GpuCameraPacket {
         origin: DVec3,
         viewport: [f32; 2],
         clip_parameters: [f32; 4],
-        clip_space: u32,
-        depth_direction: u32,
+        clip_space: ClipSpace,
+        depth_direction: DepthDirection,
         flags: u32,
     ) -> Result<Self, PacketError> {
         let matrices = [view, projection, view_projection, inverse_view_projection];
@@ -48,6 +48,8 @@ impl GpuCameraPacket {
             || (clip_parameters[1] != 0.0 && clip_parameters[1] <= clip_parameters[0])
             || clip_parameters[2] < 0.0
             || clip_parameters[3] < 0.0
+            || !(1.0 / viewport[0]).is_finite()
+            || !(1.0 / viewport[1]).is_finite()
         {
             return Err(PacketError::InvalidClip);
         }
@@ -66,7 +68,7 @@ impl GpuCameraPacket {
                 1.0 / viewport[1],
             ],
             clip_parameters,
-            metadata: [clip_space, depth_direction, flags, 1],
+            metadata: [clip_space as u32, depth_direction as u32, flags, 1],
         })
     }
 
@@ -82,6 +84,21 @@ const _: [(); 16] = [(); core::mem::align_of::<GpuCameraPacket>()];
 mod tests {
     use super::*;
 
+    fn valid_packet() -> Result<GpuCameraPacket, PacketError> {
+        GpuCameraPacket::new(
+            Mat4::IDENTITY,
+            Mat4::IDENTITY,
+            Mat4::IDENTITY,
+            Mat4::IDENTITY,
+            DVec3::ZERO,
+            [1920.0, 1080.0],
+            [0.1, 1000.0, 5000.0, 10000.0],
+            ClipSpace::ZeroToOne,
+            DepthDirection::Reversed,
+            0,
+        )
+    }
+
     #[test]
     fn gpu_layout_is_stable() {
         assert_eq!(core::mem::size_of::<GpuCameraPacket>(), 336);
@@ -89,5 +106,28 @@ mod tests {
         assert_eq!(core::mem::offset_of!(GpuCameraPacket, origin_high), 256);
         assert_eq!(core::mem::offset_of!(GpuCameraPacket, clip_parameters), 304);
         assert_eq!(core::mem::offset_of!(GpuCameraPacket, metadata), 320);
+    }
+
+    #[test]
+    fn metadata_uses_typed_discriminants() {
+        let packet = valid_packet().unwrap();
+        assert_eq!(packet.metadata, [ClipSpace::ZeroToOne as u32, DepthDirection::Reversed as u32, 0, 1]);
+    }
+
+    #[test]
+    fn rejects_viewport_whose_reciprocal_overflows() {
+        let result = GpuCameraPacket::new(
+            Mat4::IDENTITY,
+            Mat4::IDENTITY,
+            Mat4::IDENTITY,
+            Mat4::IDENTITY,
+            DVec3::ZERO,
+            [f32::MIN_POSITIVE / 2.0, 1.0],
+            [0.1, 1000.0, 5000.0, 10000.0],
+            ClipSpace::ZeroToOne,
+            DepthDirection::Forward,
+            0,
+        );
+        assert_eq!(result, Err(PacketError::InvalidClip));
     }
 }

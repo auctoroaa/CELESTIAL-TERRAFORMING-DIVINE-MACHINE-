@@ -4,16 +4,18 @@ use glam::{DVec3, Vec3, Vec4};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+#[repr(u32)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ClipSpace {
-    ZeroToOne,
-    NegativeOneToOne,
+    ZeroToOne = 0,
+    NegativeOneToOne = 1,
 }
 
+#[repr(u32)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DepthDirection {
-    Forward,
-    Reversed,
+    Forward = 0,
+    Reversed = 1,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
